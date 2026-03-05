@@ -2,7 +2,7 @@ import { stripe } from "../../config/stripe.js";
 import { env } from "../../config/env.js";
 import { db } from "../../config/db.js";
 import { payments } from "../../db/schema/index.js";
-import { enrollments } from "../../db/schema/enrollments.js";
+import { enrollments } from "../../db/schema/index.js";
 import { eq } from "drizzle-orm";
 
 export const handleStripeWebhook = async (req, res) => {
