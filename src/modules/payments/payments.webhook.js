@@ -1,7 +1,7 @@
 import { stripe } from "../../config/stripe.js";
 import { env } from "../../config/env.js";
 import { db } from "../../config/db.js";
-import { payments } from "../../db/schema/payments.js";
+import { payments } from "../../db/schema/index.js";
 import { enrollments } from "../../db/schema/enrollments.js";
 import { eq } from "drizzle-orm";
 
