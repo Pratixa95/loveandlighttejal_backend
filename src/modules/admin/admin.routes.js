@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../../middlewares/authMiddleware.js";
 import { authorizeRole } from "../../middlewares/authorizeRole.js";
 import { assignRoleToUser } from "./admin.controller.js";
+import { createProgram } from "./admin.controller.js";
 
 const router = Router();
 
@@ -26,4 +27,10 @@ router.post(
   assignRoleToUser
 );
 
+router.post(
+  "/programs",
+  requireAuth,
+  authorizeRole(["ADMIN"]),
+  createProgram
+);
 export default router;
