@@ -3,3 +3,7 @@ export { roles } from "./roles.js";
 export { userRoles } from "./userRoles.js";
 export { payments } from "./payments.js";
 export { enrollments } from "./enrollments.js";
+export { cohorts } from "./cohorts.js";
+export { programs } from "./programs.js";
+export { sessions } from "./sessions.js";
+export { attendance } from "./attendance.js";
