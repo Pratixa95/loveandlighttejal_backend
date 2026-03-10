@@ -13,14 +13,22 @@ export const requireAuth = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const user = await findUserById(decoded.id);
+    const userData = await findUserById(decoded.id);
+
+    // ✅ FIX HERE
+    const user = Array.isArray(userData) ? userData[0] : userData;
+
     if (!user) {
       return res.status(401).json({ message: "User not found" });
     }
 
     req.user = user;
+
+    console.log("AUTH USER:", req.user); // 👈 TEMP DEBUG
+
     next();
-  } catch {
+  } catch (err) {
+    console.error("AUTH ERROR:", err);
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 };
