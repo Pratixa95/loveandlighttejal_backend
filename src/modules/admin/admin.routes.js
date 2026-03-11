@@ -2,8 +2,10 @@ import { Router } from "express";
 import { requireAuth } from "../../middlewares/authMiddleware.js";
 import { authorizeRole } from "../../middlewares/authorizeRole.js";
 
-import { assignRoleToUser } from "./admin.controller.js";
-import { createProgram } from "./admin.controller.js"; // ✅ keep if inside same file
+import {
+  assignRoleToUser,
+  createProgram,
+} from "./admin.controller.js";
 
 const router = Router();
 
@@ -13,7 +15,7 @@ const router = Router();
 router.get(
   "/dashboard",
   requireAuth,
-  authorizeRole(["ADMIN"]), // ✅ exact match
+  authorizeRole(["ADMIN"]), // keep uppercase
   (req, res) => {
     res.json({
       message: "Welcome Admin",
@@ -28,7 +30,7 @@ router.get(
 router.post(
   "/assign-role",
   requireAuth,
-  authorizeRole(["ADMIN"]), // ✅ exact match
+  authorizeRole(["ADMIN"]),
   assignRoleToUser
 );
 
@@ -38,7 +40,7 @@ router.post(
 router.post(
   "/programs",
   requireAuth,
-  authorizeRole(["ADMIN"]), // ✅ exact match
+  authorizeRole(["ADMIN"]),
   createProgram
 );
 

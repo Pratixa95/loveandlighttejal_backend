@@ -15,7 +15,7 @@ export const requireAuth = async (req, res, next) => {
 
     const userData = await findUserById(decoded.id);
 
-    // ✅ FIX HERE
+    // handle array/object safely
     const user = Array.isArray(userData) ? userData[0] : userData;
 
     if (!user) {
@@ -24,7 +24,7 @@ export const requireAuth = async (req, res, next) => {
 
     req.user = user;
 
-    console.log("AUTH USER:", req.user); // 👈 TEMP DEBUG
+    console.log("AUTH USER:", req.user); // debug (remove later)
 
     next();
   } catch (err) {

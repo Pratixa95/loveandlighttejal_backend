@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 export const authorizeRole = (allowedRoles = []) => {
   return async (req, res, next) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
 
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
@@ -24,13 +24,18 @@ export const authorizeRole = (allowedRoles = []) => {
         return res.status(403).json({ message: "Role not assigned" });
       }
 
-      const userRolesList = result.map(r => r.roleName);
+      // ✅ normalize roles (IMPORTANT FIX)
+      const userRolesList = result.map(r =>
+        r.roleName?.trim().toLowerCase()
+      );
+
+      const allowed = allowedRoles.map(r => r.toLowerCase());
 
       console.log("USER ROLES:", userRolesList);
-      console.log("ALLOWED:", allowedRoles);
+      console.log("ALLOWED:", allowed);
 
-      const hasAccess = userRolesList.some(role =>
-        allowedRoles.includes(role)
+      const hasAccess = allowed.some(role =>
+        userRolesList.includes(role)
       );
 
       if (!hasAccess) {
