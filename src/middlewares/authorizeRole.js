@@ -7,6 +7,7 @@ export const authorizeRole = (allowedRoles = []) => {
   return async (req, res, next) => {
     try {
       const userId = req.user?.id;
+      console.log("USER ID:", userId);
 
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
