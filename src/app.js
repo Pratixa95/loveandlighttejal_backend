@@ -1,24 +1,80 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+
+/* ROUTES */
 import routes from "./routes.js";
+import programRoutes from "./modules/programs/program.routes.js";
+import cohortRoutes from "./modules/cohorts/cohort.routes.js";
 
 const app = express();
 
-app.use(cors({
-  origin: "http://localhost:3000",
-  credentials: true
-}));
+/* =========================
+   CORS CONFIG
+========================= */
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",           // local frontend
+      "https://www.loveandlighttejal.com" // production frontend
+    ],
+    credentials: true,
+  })
+);
 
-// 🔥 Stripe webhook MUST be before express.json()
+/* =========================
+   STRIPE WEBHOOK (IMPORTANT)
+   MUST BE BEFORE express.json()
+========================= */
 app.use(
   "/api/payments/webhook",
   express.raw({ type: "application/json" })
 );
 
+/* =========================
+   GLOBAL MIDDLEWARES
+========================= */
 app.use(express.json());
 app.use(cookieParser());
 
+/* =========================
+   HEALTH CHECK (USEFUL)
+========================= */
+app.get("/", (req, res) => {
+  res.status(200).send("LLT Backend Running 🚀");
+});
+
+/* =========================
+   API ROUTES
+========================= */
+
+/* base routes (auth etc) */
 app.use("/api", routes);
+
+/* feature routes */
+app.use("/api/programs", programRoutes);
+app.use("/api/cohorts", cohortRoutes);
+
+/* =========================
+   404 HANDLER
+========================= */
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "Route not found",
+  });
+});
+
+/* =========================
+   GLOBAL ERROR HANDLER (IMPORTANT)
+========================= */
+app.use((err, req, res, next) => {
+  console.error("GLOBAL ERROR:", err);
+
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+  });
+});
 
 export default app;
