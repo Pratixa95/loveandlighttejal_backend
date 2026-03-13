@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import routes from "./routes.js";
 import programRoutes from "./modules/programs/program.routes.js";
 import cohortRoutes from "./modules/cohorts/cohort.routes.js";
+import enrollmentRoutes from "./modules/enrollments/enrollment.routes.js";
 
 const app = express();
 
@@ -15,8 +16,8 @@ const app = express();
 app.use(
   cors({
     origin: [
-      "http://localhost:3000",           // local frontend
-      "https://www.loveandlighttejal.com" // production frontend
+      "http://localhost:3000",              // local frontend
+      "https://www.loveandlighttejal.com",  // production frontend
     ],
     credentials: true,
   })
@@ -38,10 +39,13 @@ app.use(express.json());
 app.use(cookieParser());
 
 /* =========================
-   HEALTH CHECK (USEFUL)
+   HEALTH CHECK
 ========================= */
 app.get("/", (req, res) => {
-  res.status(200).send("LLT Backend Running 🚀");
+  res.status(200).json({
+    success: true,
+    message: "Love & Light Tejal Backend Running 🚀",
+  });
 });
 
 /* =========================
@@ -54,6 +58,7 @@ app.use("/api", routes);
 /* feature routes */
 app.use("/api/programs", programRoutes);
 app.use("/api/cohorts", cohortRoutes);
+app.use("/api/enrollments", enrollmentRoutes);   // ✅ YOU MISSED THIS
 
 /* =========================
    404 HANDLER
@@ -66,7 +71,7 @@ app.use((req, res) => {
 });
 
 /* =========================
-   GLOBAL ERROR HANDLER (IMPORTANT)
+   GLOBAL ERROR HANDLER
 ========================= */
 app.use((err, req, res, next) => {
   console.error("GLOBAL ERROR:", err);
