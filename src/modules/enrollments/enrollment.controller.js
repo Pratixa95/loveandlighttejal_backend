@@ -8,6 +8,9 @@ import { eq, and } from "drizzle-orm";
 ========================= */
 export const createEnrollment = async (req, res) => {
   try {
+    console.log("BODY:", req.body);
+    console.log("USER:", req.user);
+
     const userId = req.user?.id;
     const { cohortId } = req.body;
 
@@ -19,35 +22,27 @@ export const createEnrollment = async (req, res) => {
       return res.status(400).json({ message: "cohortId required" });
     }
 
-    /* check already enrolled */
+    /* already enrolled check */
     const existing = await db
       .select()
       .from(enrollments)
-      .where(
-        and(
-          eq(enrollments.userId, userId),
-          eq(enrollments.cohortId, cohortId)
-        )
-      );
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.cohortId, cohortId)));
 
     if (existing.length > 0) {
       return res.status(409).json({ message: "Already enrolled" });
     }
 
-    /* check cohort */
-    const cohort = await db
+    /* fetch cohort */
+    const [cohort] = await db
       .select()
       .from(cohorts)
       .where(eq(cohorts.id, cohortId));
 
-    if (!cohort.length) {
+    if (!cohort) {
       return res.status(404).json({ message: "Cohort not found" });
     }
 
-    const seatsFilled = cohort[0].seats_filled;
-    const maxSeats = cohort[0].max_seats;
-
-    if (seatsFilled >= maxSeats) {
+    if (cohort.seats_filled >= cohort.max_seats) {
       return res.status(400).json({ message: "Cohort full" });
     }
 
@@ -55,18 +50,23 @@ export const createEnrollment = async (req, res) => {
     await db.insert(enrollments).values({
       userId,
       cohortId,
+      status: "active",
     });
 
-    /* increase seat */
+    /* update seat */
     await db
       .update(cohorts)
-      .set({ seats_filled: seatsFilled + 1 })
+      .set({ seats_filled: cohort.seats_filled + 1 })
       .where(eq(cohorts.id, cohortId));
 
-    res.json({ message: "Enrollment successful" });
+    return res.json({ message: "Enrollment successful" });
 
   } catch (err) {
-    console.error("ENROLL ERROR:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("ENROLL ERROR FULL:", err);
+
+    return res.status(500).json({
+      message: err.message,
+      detail: err?.detail || null
+    });
   }
 };
