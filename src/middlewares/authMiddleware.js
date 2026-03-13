@@ -14,17 +14,17 @@ export const requireAuth = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const userData = await findUserById(decoded.id);
-
-    // handle array/object safely
     const user = Array.isArray(userData) ? userData[0] : userData;
 
     if (!user) {
       return res.status(401).json({ message: "User not found" });
     }
 
-    req.user = user;
-
-    console.log("AUTH USER:", req.user); // debug (remove later)
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    };
 
     next();
   } catch (err) {

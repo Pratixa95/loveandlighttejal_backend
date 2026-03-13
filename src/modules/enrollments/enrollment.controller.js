@@ -8,8 +8,12 @@ import { eq, and } from "drizzle-orm";
 ========================= */
 export const createEnrollment = async (req, res) => {
   try {
-    const userId = req.user.id; // from auth middleware
+    const userId = req.user?.id;
     const { cohortId } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
     if (!cohortId) {
       return res.status(400).json({ message: "cohortId required" });
@@ -19,13 +23,18 @@ export const createEnrollment = async (req, res) => {
     const existing = await db
       .select()
       .from(enrollments)
-      .where(and(eq(enrollments.userId, userId), eq(enrollments.cohortId, cohortId)));
+      .where(
+        and(
+          eq(enrollments.userId, userId),
+          eq(enrollments.cohortId, cohortId)
+        )
+      );
 
     if (existing.length > 0) {
       return res.status(409).json({ message: "Already enrolled" });
     }
 
-    /* check seats */
+    /* check cohort */
     const cohort = await db
       .select()
       .from(cohorts)
@@ -35,7 +44,10 @@ export const createEnrollment = async (req, res) => {
       return res.status(404).json({ message: "Cohort not found" });
     }
 
-    if (cohort[0].seatsFilled >= cohort[0].maxSeats) {
+    const seatsFilled = cohort[0].seats_filled;
+    const maxSeats = cohort[0].max_seats;
+
+    if (seatsFilled >= maxSeats) {
       return res.status(400).json({ message: "Cohort full" });
     }
 
@@ -48,7 +60,7 @@ export const createEnrollment = async (req, res) => {
     /* increase seat */
     await db
       .update(cohorts)
-      .set({ seatsFilled: cohort[0].seatsFilled + 1 })
+      .set({ seats_filled: seatsFilled + 1 })
       .where(eq(cohorts.id, cohortId));
 
     res.json({ message: "Enrollment successful" });
