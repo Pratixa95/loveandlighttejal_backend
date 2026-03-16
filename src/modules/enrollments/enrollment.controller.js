@@ -8,11 +8,11 @@ import { eq, and } from "drizzle-orm";
 ========================= */
 export const createEnrollment = async (req, res) => {
   try {
+    console.log("REQ.USER:", req.user);
     console.log("BODY:", req.body);
-    console.log("USER:", req.user);
 
-    const userId = req.user?.id;
-    const { cohortId } = req.body;
+    const userId = String(req.user?.id);
+    const cohortId = String(req.body?.cohortId);
 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -26,7 +26,12 @@ export const createEnrollment = async (req, res) => {
     const existing = await db
       .select()
       .from(enrollments)
-      .where(and(eq(enrollments.userId, userId), eq(enrollments.cohortId, cohortId)));
+      .where(
+        and(
+          eq(enrollments.userId, userId),
+          eq(enrollments.cohortId, cohortId)
+        )
+      );
 
     if (existing.length > 0) {
       return res.status(409).json({ message: "Already enrolled" });
@@ -62,11 +67,10 @@ export const createEnrollment = async (req, res) => {
     return res.json({ message: "Enrollment successful" });
 
   } catch (err) {
-    console.error("ENROLL ERROR FULL:", err);
+    console.error("ENROLL ERROR FINAL:", err);
 
     return res.status(500).json({
       message: err.message,
-      detail: err?.detail || null
     });
   }
 };
