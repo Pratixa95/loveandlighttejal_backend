@@ -5,14 +5,21 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
+import { users } from "./users.js";
+import { cohorts } from "./cohorts.js";
+
 export const enrollments = pgTable("enrollments", {
   id: uuid("id").defaultRandom().primaryKey(),
 
-  userId: uuid("user_id").notNull(),
+  userId: uuid("user_id", { mode: "string" })
+    .references(() => users.id)
+    .notNull(),
 
-  cohortId: uuid("cohort_id").notNull(),
+  cohortId: uuid("cohort_id", { mode: "string" })
+    .references(() => cohorts.id)
+    .notNull(),
 
-  status: varchar("status", { length: 50 }),
+  status: varchar("status", { length: 50 }).default("active"),
 
   createdAt: timestamp("created_at").defaultNow(),
 
