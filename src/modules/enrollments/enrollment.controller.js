@@ -1,8 +1,6 @@
 import { db } from "../../config/db.js";
-import { enrollments } from "../../db/schema/enrollments.js";
 import { cohorts } from "../../db/schema/cohorts.js";
-import { eq } from "drizzle-orm";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 /* =========================
    CREATE ENROLLMENT
@@ -15,7 +13,6 @@ export const createEnrollment = async (req, res) => {
     const userId = String(req.user?.id);
     const cohortId = String(req.body?.cohortId);
 
-    /* AUTH CHECK */
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -23,7 +20,6 @@ export const createEnrollment = async (req, res) => {
       });
     }
 
-    /* BODY VALIDATION */
     if (!cohortId) {
       return res.status(400).json({
         success: false,
@@ -32,11 +28,10 @@ export const createEnrollment = async (req, res) => {
     }
 
     /* =========================
-       CHECK IF ALREADY ENROLLED
+       CHECK ALREADY ENROLLED
     ========================== */
     const existing = await db.execute(sql`
-      SELECT id
-      FROM enrollments
+      SELECT id FROM enrollments
       WHERE user_id = ${userId}::uuid
       AND cohort_id = ${cohortId}::uuid
     `);
@@ -44,7 +39,7 @@ export const createEnrollment = async (req, res) => {
     if (existing.rows.length > 0) {
       return res.status(409).json({
         success: false,
-        message: "Already enrolled in this cohort",
+        message: "Already enrolled",
       });
     }
 
@@ -63,13 +58,10 @@ export const createEnrollment = async (req, res) => {
       });
     }
 
-    /* =========================
-       CHECK SEAT AVAILABILITY
-    ========================== */
     if (cohort.seats_filled >= cohort.max_seats) {
       return res.status(400).json({
         success: false,
-        message: "Cohort is full",
+        message: "Cohort full",
       });
     }
 
@@ -82,22 +74,20 @@ export const createEnrollment = async (req, res) => {
     `);
 
     /* =========================
-       UPDATE SEATS
+       UPDATE SEAT
     ========================== */
     await db
       .update(cohorts)
-      .set({
-        seats_filled: cohort.seats_filled + 1,
-      })
+      .set({ seats_filled: cohort.seats_filled + 1 })
       .where(eq(cohorts.id, cohortId));
 
-    return res.status(200).json({
+    return res.json({
       success: true,
       message: "Enrollment successful",
     });
 
   } catch (err) {
-    console.error("ENROLLMENT ERROR:", err);
+    console.error("ENROLL ERROR FINAL:", err);
 
     return res.status(500).json({
       success: false,
