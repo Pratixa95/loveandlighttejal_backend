@@ -1,18 +1,19 @@
 import { db } from "../../config/db.js";
 import { cohorts } from "../../db/schema/cohorts.js";
-import { eq, sql } from "drizzle-orm";
+import { enrollments } from "../../db/schema/enrollments.js";
+import { eq, and } from "drizzle-orm";
 
 /* =========================
    CREATE ENROLLMENT
 ========================= */
 export const createEnrollment = async (req, res) => {
   try {
-    console.log("REQ.USER:", req.user);
-    console.log("BODY:", req.body);
+    const userId = req.user?.id;
+    const cohortId = req.body?.cohortId;
 
-    const userId = String(req.user?.id);
-    const cohortId = String(req.body?.cohortId);
-
+    /* =========================
+       VALIDATION
+    ========================== */
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -28,71 +29,67 @@ export const createEnrollment = async (req, res) => {
     }
 
     /* =========================
-       CHECK ALREADY ENROLLED
+       TRANSACTION (IMPORTANT)
     ========================== */
-    const existing = await db.execute(sql`
-      SELECT id FROM enrollments
-      WHERE user_id = ${userId}::uuid
-      AND cohort_id = ${cohortId}::uuid
-    `);
+    await db.transaction(async (tx) => {
 
-    if (existing.rows.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message: "Already enrolled",
+      /* 🔹 CHECK DUPLICATE */
+      const existing = await tx
+        .select()
+        .from(enrollments)
+        .where(
+          and(
+            eq(enrollments.userId, userId),
+            eq(enrollments.cohortId, cohortId)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        throw new Error("Already enrolled");
+      }
+
+      /* 🔹 FETCH COHORT */
+      const [cohort] = await tx
+        .select()
+        .from(cohorts)
+        .where(eq(cohorts.id, cohortId));
+
+      if (!cohort) {
+        throw new Error("Cohort not found");
+      }
+
+      if (cohort.seats_filled >= cohort.max_seats) {
+        throw new Error("Cohort full");
+      }
+
+      /* 🔹 CREATE ENROLLMENT */
+      await tx.insert(enrollments).values({
+        userId,
+        cohortId,
+        status: "active",
       });
-    }
 
-    /* =========================
-       FETCH COHORT
-    ========================== */
-    const [cohort] = await db
-      .select()
-      .from(cohorts)
-      .where(eq(cohorts.id, cohortId));
+      /* 🔹 UPDATE SEATS */
+      await tx
+        .update(cohorts)
+        .set({
+          seats_filled: cohort.seats_filled + 1,
+        })
+        .where(eq(cohorts.id, cohortId));
+    });
 
-    if (!cohort) {
-      return res.status(404).json({
-        success: false,
-        message: "Cohort not found",
-      });
-    }
-
-    if (cohort.seats_filled >= cohort.max_seats) {
-      return res.status(400).json({
-        success: false,
-        message: "Cohort full",
-      });
-    }
-
-    /* =========================
-       INSERT ENROLLMENT
-    ========================== */
-    await db.execute(sql`
-      INSERT INTO enrollments (user_id, cohort_id, status)
-      VALUES (${userId}::uuid, ${cohortId}::uuid, 'active')
-    `);
-
-    /* =========================
-       UPDATE SEAT
-    ========================== */
-    await db
-      .update(cohorts)
-      .set({ seats_filled: cohort.seats_filled + 1 })
-      .where(eq(cohorts.id, cohortId));
-
-    return res.json({
+    return res.status(201).json({
       success: true,
       message: "Enrollment successful",
     });
 
   } catch (err) {
-    console.error("ENROLL ERROR FINAL:", err);
+    console.error("ENROLL ERROR:", err.message);
 
-    return res.status(500).json({
+    return res.status(400).json({
       success: false,
-      message: "Server error",
-      error: err.message,
+      message: err.message,
     });
   }
 };
