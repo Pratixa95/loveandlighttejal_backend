@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { validate as isUUID } from "uuid";
 
 /* =========================
-   CREATE ENROLLMENT (FINAL)
+   CREATE ENROLLMENT (FINAL FIXED)
 ========================= */
 export const createEnrollment = async (req, res) => {
   try {
@@ -16,7 +16,6 @@ export const createEnrollment = async (req, res) => {
        VALIDATION
     ========================== */
 
-    // 🔹 auth check
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -24,7 +23,6 @@ export const createEnrollment = async (req, res) => {
       });
     }
 
-    // 🔹 UUID validation (IMPORTANT)
     if (!isUUID(userId)) {
       return res.status(400).json({
         success: false,
@@ -40,7 +38,7 @@ export const createEnrollment = async (req, res) => {
     }
 
     /* =========================
-       TRANSACTION (SAFE LOGIC)
+       TRANSACTION
     ========================== */
     await db.transaction(async (tx) => {
 
@@ -70,7 +68,8 @@ export const createEnrollment = async (req, res) => {
         throw new Error("Cohort not found");
       }
 
-      if (cohort.seats_filled >= cohort.max_seats) {
+      /* ✅ FIXED FIELD NAMES */
+      if (cohort.seatsFilled >= cohort.maxSeats) {
         throw new Error("Cohort full");
       }
 
@@ -81,18 +80,15 @@ export const createEnrollment = async (req, res) => {
         status: "active",
       });
 
-      /* 🔹 UPDATE SEATS */
+      /* ✅ FIXED UPDATE */
       await tx
         .update(cohorts)
         .set({
-          seats_filled: cohort.seats_filled + 1,
+          seatsFilled: cohort.seatsFilled + 1,
         })
         .where(eq(cohorts.id, cohortId));
     });
 
-    /* =========================
-       SUCCESS RESPONSE
-    ========================== */
     return res.status(201).json({
       success: true,
       message: "Enrollment successful",
