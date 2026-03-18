@@ -2,9 +2,10 @@ import { db } from "../../config/db.js";
 import { cohorts } from "../../db/schema/cohorts.js";
 import { enrollments } from "../../db/schema/enrollments.js";
 import { eq, and } from "drizzle-orm";
+import { validate as isUUID } from "uuid";
 
 /* =========================
-   CREATE ENROLLMENT
+   CREATE ENROLLMENT (FINAL)
 ========================= */
 export const createEnrollment = async (req, res) => {
   try {
@@ -14,6 +15,8 @@ export const createEnrollment = async (req, res) => {
     /* =========================
        VALIDATION
     ========================== */
+
+    // 🔹 auth check
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -21,15 +24,23 @@ export const createEnrollment = async (req, res) => {
       });
     }
 
-    if (!cohortId) {
+    // 🔹 UUID validation (IMPORTANT)
+    if (!isUUID(userId)) {
       return res.status(400).json({
         success: false,
-        message: "cohortId required",
+        message: "Invalid user ID",
+      });
+    }
+
+    if (!cohortId || !isUUID(cohortId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid cohort ID",
       });
     }
 
     /* =========================
-       TRANSACTION (IMPORTANT)
+       TRANSACTION (SAFE LOGIC)
     ========================== */
     await db.transaction(async (tx) => {
 
@@ -79,17 +90,20 @@ export const createEnrollment = async (req, res) => {
         .where(eq(cohorts.id, cohortId));
     });
 
+    /* =========================
+       SUCCESS RESPONSE
+    ========================== */
     return res.status(201).json({
       success: true,
       message: "Enrollment successful",
     });
 
   } catch (err) {
-    console.error("ENROLL ERROR:", err.message);
+    console.error("ENROLL ERROR:", err);
 
     return res.status(400).json({
       success: false,
-      message: err.message,
+      message: err.message || "Enrollment failed",
     });
   }
 };
