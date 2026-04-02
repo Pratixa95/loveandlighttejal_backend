@@ -1,43 +1,72 @@
 import { stripe } from "../../config/stripe.js";
+import { db } from "../../config/db.js";
+import { payments } from "../../db/schema/payments.js";
+import { cohorts } from "../../db/schema/cohorts.js";
+import { eq } from "drizzle-orm";
 
 export const createCheckoutSession = async (req, res) => {
   try {
-    const { price, programId } = req.body;
-    const userId = req.user?.id; // from requireAuth middleware
+    const userId = req.user.id;
+    const { cohortId } = req.body;
 
-    if (!price || !programId) {
+    if (!cohortId) {
       return res.status(400).json({
-        message: "price and programId are required",
+        message: "cohortId is required",
       });
     }
 
+    /* 🔹 GET COHORT */
+    const [cohort] = await db
+      .select()
+      .from(cohorts)
+      .where(eq(cohorts.id, cohortId));
+
+    if (!cohort) {
+      return res.status(404).json({
+        message: "Cohort not found",
+      });
+    }
+
+    const price = 50000; // ₹500 in paise
+
+    /* 🔹 CREATE STRIPE SESSION */
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
       line_items: [
         {
           price_data: {
-            currency: "usd",
+            currency: "inr",
             product_data: {
-              name: "Love and Light Tejal Program",
+              name: cohort.name,
             },
-            unit_amount: price, // must be cents
+            unit_amount: price,
           },
           quantity: 1,
         },
       ],
       metadata: {
-        programId,
         userId,
+        cohortId,
       },
-      success_url: "http://localhost:3000/success",
-      cancel_url: "http://localhost:3000/cancel",
+      success_url: `${process.env.FRONTEND_URL}/success`,
+      cancel_url: `${process.env.FRONTEND_URL}/cancel`,
     });
 
-    res.json({ url: session.url });
+    /* 🔹 SAVE PAYMENT (IMPORTANT) */
+    await db.insert(payments).values({
+      userId,
+      cohortId,
+      stripeSessionId: session.id,
+      amount: price,
+      currency: "inr",
+      status: "pending",
+    });
+
+    return res.json({ url: session.url });
 
   } catch (error) {
-    console.error("CHECKOUT ERROR:", error.message);
+    console.error("CHECKOUT ERROR:", error);
     res.status(500).json({ message: "Failed to create checkout session" });
   }
 };

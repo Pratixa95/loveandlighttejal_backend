@@ -1,14 +1,19 @@
 import { Router } from "express";
+import express from "express";
 import { requireAuth } from "../../middlewares/authMiddleware.js";
 import { createCheckoutSession } from "./payments.controller.js";
 import { handleStripeWebhook } from "./payments.webhook.js";
 
 const router = Router();
 
-// Webhook route (NO auth)
-router.post("/webhook", handleStripeWebhook);
+/* 🔥 WEBHOOK (NO AUTH + RAW BODY) */
+router.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  handleStripeWebhook
+);
 
-// Protected checkout route
+/* 🔹 CREATE PAYMENT */
 router.post(
   "/create-checkout-session",
   requireAuth,

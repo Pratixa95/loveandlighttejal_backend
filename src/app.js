@@ -7,6 +7,7 @@ import routes from "./routes.js";
 import programRoutes from "./modules/programs/program.routes.js";
 import cohortRoutes from "./modules/cohorts/cohort.routes.js";
 import enrollmentRoutes from "./modules/enrollments/enrollment.routes.js";
+import paymentRoutes from "./modules/payments/payments.routes.js"; // ✅ IMPORTANT
 
 const app = express();
 
@@ -16,15 +17,15 @@ const app = express();
 app.use(
   cors({
     origin: [
-      "http://localhost:3000",              // local frontend
-      "https://www.loveandlighttejal.com",  // production frontend
+      "http://localhost:3000",
+      "https://www.loveandlighttejal.com",
     ],
     credentials: true,
   })
 );
 
 /* =========================
-   STRIPE WEBHOOK (IMPORTANT)
+   STRIPE WEBHOOK (CRITICAL)
    MUST BE BEFORE express.json()
 ========================= */
 app.use(
@@ -58,7 +59,10 @@ app.use("/api", routes);
 /* feature routes */
 app.use("/api/programs", programRoutes);
 app.use("/api/cohorts", cohortRoutes);
-app.use("/api/enrollments", enrollmentRoutes);   // ✅ YOU MISSED THIS
+app.use("/api/enrollments", enrollmentRoutes);
+
+/* 🔥 ADD THIS (MISSING BEFORE) */
+app.use("/api/payments", paymentRoutes);
 
 /* =========================
    404 HANDLER
