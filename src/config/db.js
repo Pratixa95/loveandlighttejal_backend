@@ -8,7 +8,7 @@ const { Pool } = pg;
 export const pool = new Pool({
   connectionString: env.databaseUrl,
   ssl: {
-    rejectUnauthorized: false, // required for Supabase
+    rejectUnauthorized: false, // 🔥 THIS FIXES YOUR ERROR
   },
 });
 
